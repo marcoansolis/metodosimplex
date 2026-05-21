@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simplex — Gran M</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: tranzincY(14px); }
+            to   { opacity: 1; transform: tranzincY(0); }
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: tranzincY(-8px); }
+            to   { opacity: 1; transform: tranzincY(0); }
+        }
+        .animate-fade-in  { animation: fadeIn   0.35s ease-out forwards; }
+        .animate-slide-in { animation: slideDown 0.25s ease-out forwards; }
+
+        :root { color-scheme: dark; }
+
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track  { background: #09090b; }
+        ::-webkit-scrollbar-thumb  { background: #27272a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+        input[type=number] { -moz-appearance: textfield; }
+
+        .glass {
+            background: rgba(9,9,11,0.7);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid rgba(6,182,212,0.08);
+        }
+    </style>
+</head>
+
+<body class="bg-zinc-950 text-zinc-100 min-h-screen antialiased">
+
+    <!-- Fondo decorativo -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div class="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-cyan-500/8 blur-3xl"></div>
+        <div class="absolute top-1/2 -left-40 w-80 h-80 rounded-full bg-teal-500/6 blur-3xl"></div>
+        <div class="absolute bottom-20 right-20 w-64 h-64 rounded-full bg-cyan-400/4 blur-3xl"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="border-b border-zinc-800/80 px-6 py-4 glass sticky top-0 z-10">
+        <div class="max-w-3xl mx-auto flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-cyan-500/12 border border-cyan-400/20 flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-base font-semibold tracking-tight leading-tight">Método Simplex</h1>
+                <p class="text-xs text-zinc-500 leading-tight">Gran M · Simplex</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-4 py-8 space-y-5">
+
+        <!-- Variables -->
+        <div class="flex items-center gap-3 animate-slide-in" style="animation-delay:0.05s">
+            <span class="text-xs text-zinc-500 uppercase tracking-wider">Variables</span>
+            <div class="flex items-center gap-2 ml-auto sm:ml-0">
+                <button id="decVars"
+                    class="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700
+                           text-zinc-300 flex items-center justify-center transition-all duration-150
+                           active:scale-90 text-base leading-none select-none">−</button>
+                <span id="numVarsDisplay"
+                    class="w-8 text-center font-mono text-zinc-200 text-sm tabular-nums">2</span>
+                <input type="hidden" id="numVars" value="2">
+                <button id="incVars"
+                    class="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700
+                           text-zinc-300 flex items-center justify-center transition-all duration-150
+                           active:scale-90 text-base leading-none select-none">+</button>
+            </div>
+        </div>
+
+        <!-- Función objetivo -->
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 animate-slide-in" style="animation-delay:0.1s">
+            <p class="text-xs text-zinc-500 uppercase tracking-wider mb-3">Función Objetivo</p>
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <button id="minMaxToggle"
+                    class="px-2.5 py-1 rounded-lg text-xs font-bold border transition-all duration-200
+                           bg-cyan-600/15 text-cyan-300 border-cyan-500/30
+                           hover:bg-cyan-600/25 active:scale-95 select-none">Min</button>
+                <span class="text-zinc-600 text-sm select-none">Z =</span>
+                <div id="objCoeffs" class="flex items-center gap-1.5 flex-wrap"></div>
+            </div>
+        </div>
+
+        <!-- Restricciones -->
+        <div class="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 animate-slide-in" style="animation-delay:0.15s">
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-xs text-zinc-500 uppercase tracking-wider">Restricciones</p>
+                <button id="addConstraint"
+                    class="flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300
+                           transition-colors duration-150 group">
+                    <svg class="w-3.5 h-3.5 transition-transform duration-150 group-hover:rotate-90"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Agregar
+                </button>
+            </div>
+            <div class="overflow-x-auto -mx-1">
+                <table class="w-full">
+                    <thead>
+                        <tr id="conHeader" class="text-xs border-b border-zinc-800/50"></tr>
+                    </thead>
+                    <tbody id="constraintRows"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Botón resolver -->
+        <div class="flex justify-end animate-slide-in" style="animation-delay:0.2s">
+            <button id="solveBtn"
+                class="inline-flex items-center gap-2 px-7 py-2.5 rounded-xl
+                       bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-sm
+                       transition-all duration-200 hover:shadow-xl hover:shadow-cyan-500/20
+                       active:scale-95 disabled:opacity-50 disabled:pointer-events-none">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                Resolver
+            </button>
+        </div>
+
+        <!-- Resultados -->
+        <div id="resultsSection" class="hidden"></div>
+
+    </main>
+
+    <script src="../model/simplex.js"></script>
+    <script src="../controller/controller.js"></script>
+</body>
+</html>
