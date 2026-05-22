@@ -208,3 +208,4 @@ class SimplexModel {
     return corners;
   }
 }
+window.SimplexModel = SimplexModel;
